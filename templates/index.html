@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NepAgNeuroVision - Crop Disease Diagnosis</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f9fafb;
+    }
+    .hero {
+      background: linear-gradient(135deg, #256d45, #1b4332);
+      color: white;
+    }
+    .card {
+      background-color: #ffffff;
+      border-radius: 1rem;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+    }
+    .upload-area {
+      border: 2px dashed #d1d5db;
+      padding: 2rem;
+      border-radius: 0.75rem;
+      text-align: center;
+      position: relative;
+      transition: all 0.3s ease-in-out;
+    }
+    .upload-area.dragover {
+      border-color: #256d45;
+      background-color: #ecfdf5;
+      border-width: 4px;   /* Increase thickness (default ~1-2px) */
+      border-style: solid; /* Ensure border is visible */
+    }
+    .file-input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      z-index: 10;
+      cursor: pointer;
+    }
+    .btn {
+      padding: 0.75rem;
+      font-weight: 600;
+      border-radius: 0.5rem;
+      transition: all 0.3s ease;
+    }
+    .btn-primary {
+      background-color: #256d45;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #1b4332;
+    }
+    .btn-secondary {
+      background-color: #6b7280;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background-color: #4b5563;
+    }
+    .confidence-bar {
+      background: #e5e7eb;
+      height: 8px;
+      border-radius: 9999px;
+    }
+    .confidence-fill {
+      background: #256d45;
+      height: 100%;
+      border-radius: inherit;
+      transition: width 0.5s ease;
+    }
+    .recommendation-card {
+      transition: transform 0.3s ease;
+    }
+    .recommendation-card:hover {
+      transform: translateY(-3px);
+    }
+  </style>
+</head>
+<body class="text-gray-800">
+  <header class="hero py-14 text-center">
+    <div class="container mx-auto px-6">
+      <h1 class="text-5xl font-bold mb-3">NepAgNeuroVision</h1>
+      <p class="text-xl font-light opacity-90">Empowering Farmers with Deep Learning–Driven Crop Health Diagnosis, and Research driven recommendations instantly</p>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-6 py-12">
+    <section class="card max-w-5xl mx-auto p-8">
+      <h2 class="text-3xl font-semibold text-gray-800 mb-6 flex items-center">
+        <i class="fas fa-seedling text-green-600 mr-3"></i> Crop Diagnosis Form
+      </h2>
+
+      <form id="predict-form" method="POST" action="{{ url_for('predict') }}" enctype="multipart/form-data">
+        {{ form.csrf_token }}
+        <div class="mb-6">
+          <label class="block text-gray-700 font-medium mb-2">
+            <i class="fas fa-leaf text-green-600 mr-2"></i> Choose Crop Type
+          </label>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            {% set all_crops = ['Cauliflower', 'Kidneybean', 'Largecardamom', 'Mungbean', 'Maize', 'Strawberry', 'Chilli', 'Rice', 'Sesame', 'Onion'] %}
+            {% for crop in all_crops %}
+              <div class="crop-card cursor-pointer border rounded-lg p-4 text-center hover:shadow-lg" data-crop="{{ crop }}">
+                <img src="{{ url_for('static', filename='crops/' + crop.lower().replace(' ', '_').replace('/', '_') + '.jpg') }}" alt="{{ crop }}" class="mx-auto h-32 w-auto mb-2 rounded-md">
+                <p class="font-medium">{{ crop }}</p>
+              </div>
+            {% endfor %}
+          </div>
+          {{ form.crop(id="crop", class="hidden") }}
+          {% if form.crop.errors %}<p class="text-sm text-red-600 mt-1">{{ form.crop.errors[0] }}</p>{% endif %}
+        </div>
+
+        <div id="upload-section" class="hidden">
+          <div class="mb-6 relative">
+            <label for="imageInput" class="block text-gray-700 font-medium mb-2">
+              <i class="fas fa-image text-green-600 mr-2"></i> Upload or Drag Image
+            </label>
+            <div id="upload-area" class="upload-area">
+              <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+              <p class="text-gray-600">Drag & drop or click to upload</p>
+              {{ form.file(id="imageInput", class="file-input", accept="image/jpeg,image/png,image/bmp") }}
+            </div>
+            <div id="image-preview" class="mt-4"></div>
+            {% if form.file.errors %}<p class="text-sm text-red-600 mt-1">{{ form.file.errors[0] }}</p>{% endif %}
+          </div>
+
+          <div class="mb-6">
+            <button type="button" id="capture-btn" class="btn btn-secondary w-full flex items-center justify-center">
+              <i class="fas fa-camera mr-2"></i> Capture with Camera
+            </button>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-full flex items-center justify-center">
+            <i class="fas fa-microscope mr-2"></i> Analyze Now
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card max-w-5xl mx-auto p-8 mt-12">
+      <h2 class="text-3xl font-semibold text-gray-800 mb-6 flex items-center">
+        <i class="fas fa-chart-line text-green-600 mr-3"></i> Diagnosis Result
+      </h2>
+      <div id="results-container">
+        {% if error %}
+          <div class="bg-red-100 text-red-800 p-4 rounded-lg">{{ error }}</div>
+        {% elif prediction %}
+          <div class="space-y-4">
+            <h3 class="text-xl font-semibold text-green-700">{{ prediction }}</h3>
+            {% if image_file %}
+              <img src="{{ url_for('static', filename='Uploads/' + image_file) }}" class="max-w-sm mx-auto rounded-lg shadow" alt="Uploaded Image">
+            {% endif %}
+
+            {% if prediction != "Image does not fall under the trained model." %}
+              <div class="confidence-bar">
+                <div class="confidence-fill" style="width: {{ confidence|default(0) }}%;"></div>
+              </div>
+
+              <div>
+                <h4 class="font-medium text-gray-700 mt-4 mb-2">Recommendations</h4>
+                <div class="space-y-3">
+                  {% for rec in recommendations %}
+                    <div class="recommendation-card p-4 bg-gray-50 border rounded-lg">
+                      <h5 class="text-gray-800 font-semibold">{{ rec.action }}</h5>
+                      <p class="text-sm text-gray-600"><strong>Priority:</strong> {{ rec.priority }}</p>
+                      <p class="text-sm text-gray-600"><strong>Details:</strong> {{ rec.details }}</p>
+                      <p class="text-sm text-gray-600"><strong>Follow-up:</strong> {{ rec.follow_up }}</p>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        {% else %}
+          <p class="text-gray-600">No diagnosis yet. Upload or capture an image and choose your crop.</p>
+        {% endif %}
+      </div>
+    </section>
+  </main>
+
+  <footer class="text-center py-8 text-sm text-gray-500 border-t mt-12">
+    <p>&copy; 2025 <strong>NepAgNeuroVision</strong>. All rights reserved.Designed: Bikas Basnet</p>
+  </footer>
+
+  <script>
+    document.querySelectorAll('.crop-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const crop = card.dataset.crop;
+        document.getElementById('crop').value = crop;
+        document.querySelectorAll('.crop-card').forEach(c => c.classList.remove('border-green-600', 'border-2'));
+        card.classList.add('border-green-600', 'border-2');
+        document.getElementById('upload-section').classList.remove('hidden');
+      });
+    });
+  </script>
+</body>
+</html>
