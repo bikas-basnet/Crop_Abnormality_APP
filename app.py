@@ -35,7 +35,7 @@ class SEBlock(nn.Module):
         y = self.fc(y).view(b, c, 1, 1)
         return x * y.expand_as(x)
 
-# Define HybridShuffleNetSqueezeNet for Large Cardamom, Mungbean, Chilli, Sesame, Onion
+# Define HybridShuffleNetSqueezeNet
 class HybridShuffleNetSqueezeNet(nn.Module):
     def __init__(self, num_classes):
         super(HybridShuffleNetSqueezeNet, self).__init__()
@@ -78,8 +78,6 @@ class HybridShuffleNetSqueezeNet(nn.Module):
         return x
 
 # Crop configurations
-import os
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 crop_configs = {
     'Cauliflower': {
@@ -98,7 +96,7 @@ crop_configs = {
                 {
                     'action': 'Use biological and chemical fungicides',
                     'priority': 'High',
-                    'details': 'Apply Trichoderma harzianum (5 g/L water, 500 g/ha) or copper-based fungicide (e.g., Bordeaux mixture, 2.5 kg/ha) every 7-10 days.',
+                    'details': 'Apply Trichoderma harzianum (5 g/L water, 500 g/ha) or copper-based fungicide (e.g., Bordeaux mixture, 2.5 kg/ha) every 7-10 days. Mix 2 ml/L water (300 ml/ha) and spray every 7–14 days as a preventative measure',
                     'follow_up': 'Rotate fungicide classes; monitor resistance.'
                 }
             ],
@@ -426,7 +424,7 @@ crop_configs = {
         'recommendations': {
             'Healthy': [
                 {
-                    'action': 'Maintain water and nutrition',
+                    'action': 'Maintain water and nutrition. Over FYM used has risk of Blast suceptible',
                     'priority': 'Medium',
                     'details': 'Keep fields flooded (2-5 cm depth). Apply NPK (120:40:40 kg/ha) or farmyard manure (10 t/ha). Maintain soil pH 5.5-6.5.',
                     'follow_up': 'Check water and nutrients every 6 months.'
@@ -442,13 +440,24 @@ crop_configs = {
                 {
                     'action': 'Apply fungicides',
                     'priority': 'High',
-                    'details': 'Use tricyclazole (0.6 g/L water, 300 g/ha) or Trichoderma viride (5 g/L water, 500 g/ha). Spray at tillering and panicle initiation.',
+                    'details': (
+                        "Use Tricyclazole 22% + Hexaconazole 3% SC (1 ml/L water, 500 ml/ha, 0.2% concentration) for foliar spray. "
+                        "Alternatively, use Tricyclazole 75% WP (0.6 g/L water, 300 g/ha) or Trichoderma viride (5 g/L water, 500 g/ha). "
+                        "Spray at tillering and panicle initiation stages, repeating 2–3 times at 7-day intervals. "
+                        "Mix 500 ml of Tricyclazole 22% + Hexaconazole 3% SC in 500 liters of water per hectare."
+                    ),
                     'follow_up': 'Monitor neck and leaf lesions.'
                 },
                 {
                     'action': 'Cultural controls',
                     'priority': 'High',
-                    'details': 'Use resistant varieties (e.g., Sabitri). Avoid excess nitrogen. Remove infected debris.',
+                    'details': (
+                        "Use resistant varieties (e.g., Sabitri). In Nepal's Terai region (60–900 masl), leaf blast-resistant rice varieties include "
+                        "Sabitri, Hardinath-1, Radha-12, Saga 4, INH12023, DR-11, Hardinath-3,Sukkha-1, Sukkha-2, Sukkha-3, Sukkha-4, Sukkha-5, and Sukkha-6, with Chaite-5, INH14120, and INH14172 showing moderate resistance."
+                        "In the Midhills (1,100–1,500 masl), resistant varieties include Khumal-1, Khumal-2, Khumal-3, Chandannath-1, Chandannath-3, "
+                        "Palung-2, Manjushree, IR 87760-15-2-2-4, IR 70210-39-CPA-7-1, NR 11105-B-B-20-2-1, and Khumal-13. Avoid excess nitrogen. "
+                        "Remove infected debris."
+                    ),
                     'follow_up': 'Check during humid conditions.'
                 }
             ],
@@ -569,6 +578,20 @@ crop_configs = {
         }
     }
 }
+
+# Crop classifier class names based on training folder order
+crop_class_names = [
+    'Cauliflower', 'Chilli', 'Kidneybean', 'LargeCardamom', 'Maize',
+    'Mungbean', 'Onion', 'Rice', 'Sesame', 'Strawberry'
+]
+
+# Mapping to handle naming differences
+crop_name_mapping = {
+    'Kidneybean': 'Rajma/Kidney Bean',
+    'LargeCardamom': 'Large Cardamom'
+}
+reverse_crop_name_mapping = {v: k for k, v in crop_name_mapping.items()}
+
 # Image preprocessing
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -576,7 +599,7 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# Model loading
+# Model loading for disease models
 models_cache = {}
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -586,7 +609,7 @@ def load_model(crop):
         model_path = config['model_path']
         model_type = config['model_type']
         num_classes = config['num_classes']
-        print(f"Loading model for {crop} from {model_path}")  # Debugging
+        print(f"Loading model for {crop} from {model_path}")
         try:
             if model_type == 'mobilenet_v2':
                 model = models.mobilenet_v2(weights=None)
@@ -604,12 +627,32 @@ def load_model(crop):
             model.eval()
             models_cache[crop] = model
         except FileNotFoundError:
-            print(f"Model file '{model_path}' not found.")  # Debugging
+            print(f"Model file '{model_path}' not found.")
             raise FileNotFoundError(f"Model file '{model_path}' not found.")
         except Exception as e:
-            print(f"Error loading model: {str(e)}")  # Debugging
+            print(f"Error loading model: {str(e)}")
             raise
     return models_cache[crop]
+
+# Load the crop classifier (cached globally)
+crop_classifier = None
+crop_classifier_path = os.path.join(BASE_DIR, 'model', 'CropclassifierHybrid.pth')
+
+def load_crop_classifier():
+    global crop_classifier
+    if crop_classifier is None:
+        print(f"Loading crop classifier from {crop_classifier_path}")
+        try:
+            model = HybridShuffleNetSqueezeNet(num_classes=len(crop_class_names))  # 11 classes
+            model.load_state_dict(torch.load(crop_classifier_path, map_location=device))
+            model.to(device)
+            model.eval()
+            crop_classifier = model
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Crop classifier model '{crop_classifier_path}' not found.")
+        except Exception as e:
+            raise RuntimeError(f"Error loading crop classifier: {str(e)}")
+    return crop_classifier
 
 # Flask-WTF Form
 class PredictForm(FlaskForm):
@@ -620,21 +663,21 @@ class PredictForm(FlaskForm):
 @app.route('/')
 def index():
     form = PredictForm()
-    print("Rendering index with crops:", list(crop_configs.keys()))  # Debugging
+    print("Rendering index with crops:", list(crop_configs.keys()))
     return render_template('index.html', form=form)
 
 @app.route('/predict', methods=['POST'])
 def predict():
     form = PredictForm()
-    print("Received predict request:", request.form, request.files)  # Debugging
+    print("Received predict request:", request.form, request.files)
     if not form.validate_on_submit():
-        print("Form validation failed:", form.errors)  # Debugging
+        print("Form validation failed:", form.errors)
         return render_template('index.html', form=form, error='Invalid form submission. Please check your inputs.')
 
     selected_crop = form.crop.data
-    print("Selected crop:", selected_crop)  # Debugging
+    print("Selected crop:", selected_crop)
     if selected_crop not in crop_configs:
-        print(f"Invalid crop selected: {selected_crop}")  # Debugging
+        print(f"Invalid crop selected: {selected_crop}")
         return render_template('index.html', form=form, error='Invalid crop selected.')
 
     config = crop_configs[selected_crop]
@@ -645,14 +688,14 @@ def predict():
     max_file_size = 10 * 1024 * 1024  # 10MB
     if form.file.data:
         file = form.file.data
-        print("Uploaded file:", file.filename)  # Debugging
+        print("Uploaded file:", file.filename)
         if file.content_length > max_file_size:
-            print("File size exceeds 10MB")  # Debugging
+            print("File size exceeds 10MB")
             return render_template('index.html', form=form, error='File size exceeds 10MB.')
         image_data = file.read()
         kind = filetype.guess(image_data)
         if kind is None or kind.mime not in ['image/jpeg', 'image/png', 'image/bmp']:
-            print(f"Invalid file type: {kind.mime if kind else 'Unknown'}")  # Debugging
+            print(f"Invalid file type: {kind.mime if kind else 'Unknown'}")
             return render_template('index.html', form=form, error='Invalid file type. Please upload an image (jpg, jpeg, png, bmp).')
         image_filename = f"uploaded_{int(time.time())}_{file.filename}"
         image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
@@ -661,20 +704,64 @@ def predict():
         try:
             image = Image.open(BytesIO(image_data)).convert('RGB')
         except Exception as e:
-            print(f"Invalid image file: {str(e)}")  # Debugging
+            print(f"Invalid image file: {str(e)}")
             return render_template('index.html', form=form, error=f'Invalid image file: {str(e)}')
     else:
-        print("No image uploaded")  # Debugging
+        print("No image uploaded")
         return render_template('index.html', form=form, error='Please upload an image.')
 
     # Preprocess image
     try:
         image_tensor = transform(image).unsqueeze(0).to(device)
     except Exception as e:
-        print(f"Error processing image: {str(e)}")  # Debugging
+        print(f"Error processing image: {str(e)}")
         return render_template('index.html', form=form, error=f'Error processing image: {str(e)}')
 
-    # Load model and predict
+    # Run crop classifier to verify the image matches the selected crop
+    try:
+        classifier = load_crop_classifier()
+        with torch.no_grad():
+            outputs = classifier(image_tensor)
+            probabilities = torch.softmax(outputs, dim=1)
+            crop_confidence, predicted_crop_idx = torch.max(probabilities, 1)
+            predicted_crop = crop_class_names[predicted_crop_idx.item()]
+            crop_confidence = crop_confidence.item() * 100
+
+        print(f"Crop classifier prediction: {predicted_crop}, Confidence: {crop_confidence}%")
+
+        # Handle 'Model' class (potential error in training data)
+        if predicted_crop == 'Model':
+            probabilities[0, crop_class_names.index('Model')] = -float('inf')
+            crop_confidence, predicted_crop_idx = torch.max(probabilities, 1)
+            predicted_crop = crop_class_names[predicted_crop_idx.item()]
+            crop_confidence = crop_confidence.item() * 100
+            print(f"Re-evaluated after ignoring 'Model': {predicted_crop}, Confidence: {crop_confidence}%")
+
+        # Map predicted crop to config name
+        predicted_crop_mapped = crop_name_mapping.get(predicted_crop, predicted_crop)
+        # Map selected crop to classifier's class name
+        selected_crop_classifier = reverse_crop_name_mapping.get(selected_crop, selected_crop)
+
+        CROP_CONFIDENCE_THRESHOLD = 60.0
+        if crop_confidence < CROP_CONFIDENCE_THRESHOLD:
+            return render_template(
+                'index.html',
+                form=form,
+                error=f'Image crop detection unclear (confidence {crop_confidence:.2f}%). Please upload a clearer image of {selected_crop}.',
+                image_file=image_filename
+            )
+        if predicted_crop != selected_crop_classifier:
+            return render_template(
+                'index.html',
+                form=form,
+                error=f'Uploaded image appears to be {predicted_crop_mapped} (confidence {crop_confidence:.2f}%), not {selected_crop}. Please upload the correct crop image to avoid false results.',
+                image_file=image_filename
+            )
+    except Exception as e:
+        print(f"Error during crop classification: {str(e)}")
+        return render_template('index.html', form=form, error=f'Error during crop verification: {str(e)}')
+
+    # Proceed with disease prediction
     try:
         model = load_model(selected_crop)
         with torch.no_grad():
@@ -683,12 +770,12 @@ def predict():
             confidence, predicted = torch.max(probabilities, 1)
             predicted_class = class_names[predicted.item()]
             confidence = confidence.item() * 100
-        print(f"Prediction: {predicted_class}, Confidence: {confidence}%")  # Debugging
+        print(f"Prediction: {predicted_class}, Confidence: {confidence}%")
 
         # Check for unknown image
-        CONFIDENCE_THRESHOLD = 50.0  # Threshold for unknown images
+        CONFIDENCE_THRESHOLD = 50.0
         if confidence < CONFIDENCE_THRESHOLD:
-            print(f"Confidence {confidence}% below threshold {CONFIDENCE_THRESHOLD}%")  # Debugging
+            print(f"Confidence {confidence}% below threshold {CONFIDENCE_THRESHOLD}%")
             return render_template(
                 'index.html',
                 form=form,
@@ -696,7 +783,7 @@ def predict():
                 image_file=image_filename
             )
     except Exception as e:
-        print(f"Error during prediction: {str(e)}")  # Debugging
+        print(f"Error during prediction: {str(e)}")
         return render_template('index.html', form=form, error=f'Error during prediction: {str(e)}')
 
     # Determine severity
