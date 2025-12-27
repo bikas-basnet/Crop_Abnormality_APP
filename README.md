@@ -7,6 +7,7 @@
 [![Flask](https://img.shields.io/badge/Flask-2.0+-black)](https://flask.palletsprojects.com/)  
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red)](https://pytorch.org/)  
 <!-- Replace with your actual DOI after Zenodo archiving -->
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18069307.svg)](https://doi.org/10.5281/zenodo.18069307)
 
 **NepAgNeuroVision** is a bilingual (English/नेपाली) Flask web application that employs Convolutional Neural Networks (CNNs) and custom hybrid architectures to classify crop abnormalities across **11 major crops** grown in Nepal, covering a total of **36 classes** (including healthy states, diseases, and nutrient deficiencies). The system provides instant AI-powered diagnosis, confidence breakdown, and research-backed, Nepal-specific management recommendations to support farmers.
