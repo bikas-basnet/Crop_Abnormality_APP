@@ -1,14 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NepAgNeuroVision - Crop Disease Diagnosis</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Noto+Sans+Nepali:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
+    :root {
+      --bg-light: #f9fafb;
+      --card-light: #ffffff;
+      --text-light: #1f2937;
+      --border-light: rgba(0,0,0,0.08);
+    }
+    [data-theme="dark"] {
+      --bg-light: #0f172a;
+      --card-light: rgba(15, 23, 42, 0.6);
+      --text-light: #e2e8f0;
+      --border-light: rgba(255,255,255,0.1);
+    }
     body {
-      font-family: 'Poppins', sans-serif;
-      background-color: #f9fafb;
+      font-family: 'Poppins', 'Noto Sans Nepali', sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-light);
+      transition: background-color 0.4s ease, color 0.4s ease;
     }
     .hero {
       background-image: url("{{ url_for('static', filename='Logo/BI.jpg') }}");
@@ -21,258 +38,342 @@
     .hero::before {
       content: '';
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.4);
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.55);
       z-index: 1;
     }
-    .hero > * {
-      position: relative;
-      z-index: 2;
-    }
+    .hero > * { position: relative; z-index: 2; }
+
     .logo-container {
       background: darkolivegreen;
       border-radius: 50%;
-      padding: 0;
+      padding: 8px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+      width: 130px;
+      height: 130px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    .logo-container:hover {
+      transform: scale(1.08);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    }
+    .logo {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      transition: all 0.4s ease;
+    }
+    [data-theme="dark"] .glass-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .glass-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); }
+
+    .upload-area {
+      background: rgba(248, 250, 252, 0.7);
+      backdrop-filter: blur(10px);
+      border: 2px dashed #94a3b8;
+      padding: 3rem;
+      border-radius: 1rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    [data-theme="dark"] .upload-area { background: rgba(15, 23, 42, 0.6); border-color: #475569; }
+
+    .upload-area.dragover {
+      border-color: #16a34a;
+      background-color: #f0fdf4;
+      transform: scale(1.02);
+    }
+
+    .file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+    .btn {
+      padding: 0.9rem 1.5rem;
+      font-weight: 600;
+      border-radius: 0.6rem;
+      transition: all 0.3s ease;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      width: 120px;
-      height: 120px;
-      overflow: hidden;
-      cursor: pointer;
-    }
-    .logo {
-      width: 90%;
-      height: 90%;
-      object-fit: contain;
-      transition: transform 0.3s ease;
-    }
-    .logo-container:hover .logo {
-      transform: rotate(10deg) scale(1.05);
-    }
-    .logo-container:active .logo {
-      transform: scale(1.3);
-    }
-    .card {
-      background-color: #ffffff;
-      border-radius: 1rem;
-      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
-    }
-    .upload-area {
-      border: 2px dashed #d1d5db;
-      padding: 2rem;
-      border-radius: 0.75rem;
-      text-align: center;
-      position: relative;
-      transition: all 0.3s ease-in-out;
-    }
-    .upload-area.dragover {
-      border-color: #256d45;
-      background-color: #ecfdf5;
-      border-width: 4px;
-      border-style: solid;
-    }
-    .file-input {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      z-index: 10;
-      cursor: pointer;
-    }
-    .btn {
-      padding: 0.75rem;
-      font-weight: 600;
-      border-radius: 0.5rem;
-      transition: all 0.3s ease;
+      gap: 0.5rem;
     }
     .btn-primary {
-      background-color: #256d45;
+      background: linear-gradient(to right, #166534, #22c55e);
       color: white;
     }
-    .btn-primary:hover {
-      background-color: #1b4332;
+    .btn-primary:hover { background: linear-gradient(to right, #15803d, #16a34a); transform: translateY(-2px); }
+    .btn-primary:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+      transform: none;
     }
-    .btn-secondary {
-      background-color: #6b7280;
-      color: white;
-    }
-    .btn-secondary:hover {
-      background-color: #4b5563;
-    }
-    .confidence-bar {
-      background: #e5e7eb;
-      height: 8px;
-      border-radius: 9999px;
-    }
-    .confidence-fill {
-      background: #256d45;
-      height: 100%;
-      border-radius: inherit;
-      transition: width 0.5s ease;
-    }
-    .recommendation-card {
-      transition: transform 0.3s ease;
-    }
-    .recommendation-card:hover {
-      transform: translateY(-3px);
-    }
+
     .crop-card {
       transition: all 0.3s ease;
-    }
-    .crop-card.selected {
-      border-color: #256d45;
-      border-width: 4px;
-      ring: 2px solid #256d45;
+      cursor: pointer;
+      border: 2px solid transparent;
     }
     .crop-card:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transform: translateY(-6px);
+      box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
     }
+    .crop-card.selected {
+      border-color: #16a34a;
+      box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.2);
+      transform: scale(1.05);
+    }
+
+    .confidence-bar {
+      height: 12px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    .confidence-fill {
+      height: 100%;
+      background: linear-gradient(to right, #22c55e, #16a34a);
+      border-radius: inherit;
+      transition: width 1.8s ease-out;
+      animation: fillBar 1.8s ease-out forwards;
+    }
+    @keyframes fillBar { from { width: 0; } }
+
+    .recommendation-card {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      transition: all 0.3s ease;
+      border-radius: 1rem;
+    }
+    [data-theme="dark"] .recommendation-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
+    .recommendation-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
     .error-message {
       background-color: #fee2e2;
       color: #dc2626;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      font-size: 1.1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      padding: 1.2rem;
+      border-radius: 0.8rem;
+      border-left: 6px solid #dc2626;
+      font-weight: 500;
     }
-    .uploaded-image, .preview-image {
-  width: 300px;
-  height: 200px;
-  object-fit: cover;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
-@media (max-width: 640px) {
-  .uploaded-image, .preview-image {
-    width: 10%;
-    height: 50px;
-  }
-}
+
+    .uploaded-image {
+      max-width: 380px;
+      width: 100%;
+      height: auto;
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      margin: 1.5rem auto;
+      display: block;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+    @media (min-width: 640px) { .bento-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 768px) { .bento-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 1024px) { .bento-grid { grid-template-columns: repeat(6, 1fr); } }
+
+    .toggle-btn {
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
   </style>
 </head>
-<body class="text-gray-800">
-  <header class="hero py-14 text-center">
-    <div class="container mx-auto px-6 flex items-center justify-center">
-      <div class="logo-container">
+<body class="text-gray-800" data-theme="light">
+
+  <header class="hero py-8 text-center relative">
+    <div class="container mx-auto px-6 flex flex-col items-center">
+      <div class="absolute top-4 right-4 z-10 flex gap-3">
+        <button id="lang-toggle" class="toggle-btn text-white">नेपाली</button>
+        <button id="theme-toggle" class="toggle-btn text-white">
+          <i class="fas fa-moon"></i> Dark
+        </button>
+      </div>
+
+      <div class="logo-container mb-6">
         <img src="{{ url_for('static', filename='Logo/logo.jpg') }}" alt="NepAgNeuroVision Logo" class="logo">
       </div>
-      <div class="ml-4">
-        <h1 class="text-5xl font-bold mb-3">NepAgNeuroVision</h1>
-        <p class="text-xl font-light opacity-90">Empowering Farmers with Deep Learning–Driven Crop Health Diagnosis and Research-Driven Recommendations</p>
-      </div>
+      <h1 class="text-5xl md:text-6xl font-bold mb-4" data-en="NepAgNeuroVision" data-np="नेपएग्न्युरोभिजन">NepAgNeuroVision</h1>
+      <p class="text-xl md:text-2xl font-light max-w-4xl opacity-95" 
+         data-en="Empowering Nepali Farmers with AI-Powered Crop Disease Diagnosis & Research-Backed Solutions"
+         data-np="नेपाली किसानहरूलाई एआई-संचालित बाली रोग निदान र अनुसन्धान-आधारित समाधानले सशक्त बनाउँदै">
+        Empowering Nepali Farmers with AI-Powered Crop Disease Diagnosis & Research-Backed Solutions
+      </p>
     </div>
   </header>
 
   <main class="container mx-auto px-6 py-12">
-    <section class="card max-w-5xl mx-auto p-8">
-      <h2 class="text-3xl font-semibold text-gray-800 mb-6 flex items-center">
-        <i class="fas fa-seedling text-green-600 mr-3"></i> Crop Diagnosis Form
+    <section class="glass-card max-w-6xl mx-auto p-8 md:p-12">
+      <h2 class="text-4xl font-bold mb-8 text-center flex items-center justify-center gap-3"
+          data-en="Crop Disease Diagnosis" data-np="बाली रोग निदान">
+        <i class="fas fa-seedling text-green-600 text-5xl"></i>
+        Crop Disease Diagnosis
       </h2>
 
-      <form id="predict-form" method="POST" action="{{ url_for('predict') }}" enctype="multipart/form-data">
+      <form id="predict-form" method="POST" action="{{ url_for('predict') }}" enctype="multipart/form-data" class="space-y-10">
         {{ form.csrf_token }}
-        <div class="mb-6">
-          <label class="block text-gray-700 font-medium mb-2">
-            <i class="fas fa-leaf text-green-600 mr-2"></i> Choose Crop Type
+
+        <!-- Crop Selection -->
+        <div>
+          <label class="block text-xl font-semibold mb-6 text-center"
+                 data-en="Select Your Crop" data-np="आफ्नो बाली छान्नुहोस्">
+            <i class="fas fa-leaf text-green-600 mr-2"></i> Select Your Crop
           </label>
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <!-- Updated crop list to match crop_configs -->
-            {% set all_crops = ['Cauliflower', 'Chilli', 'Kidneybean', 'LargeCardamom', 'Maize', 'Mungbean', 'Onion', 'Rice', 'Sesame', 'Strawberry'] %}
+          <div class="bento-grid">
+            {% set all_crops = [
+              'Acid-Lime', 'Cauliflower', 'Chilli', 'Kidneybean', 'LargeCardamom', 'Maize',
+              'Mungbean', 'Onion', 'Rice', 'Sesame', 'Strawberry'
+            ] %}
             {% for crop in all_crops %}
-              <div class="crop-card cursor-pointer border rounded-lg p-4 text-center hover:shadow-lg" data-crop="{{ crop }}">
-                <img src="{{ url_for('static', filename='crops/' + crop.lower().replace(' ', '_').replace('/', '_') + '.jpg') }}" alt="{{ crop }}" class="mx-auto h-32 w-auto mb-2 rounded-md object-cover">
-                <p class="font-medium">{{ crop }}</p>
+              <div class="crop-card text-center p-4 rounded-xl bg-gray-50 glass-card" data-crop="{{ crop }}">
+                <img 
+                  src="{{ url_for('static', filename='crops/' + crop|lower|replace(' ', '_')|replace('/', '_') + '.jpg') }}" 
+                  alt="{{ crop }}"
+                  class="w-full h-32 object-cover rounded-lg mb-3 shadow-md"
+                  onerror="this.src='{{ url_for('static', filename='crops/placeholder.jpg') }}'"
+                >
+                <p class="font-semibold text-sm">
+                  <span data-en="{{ crop }}"
+                        data-np="{% if crop == 'Acid-Lime' %}कागती{% elif crop == 'Cauliflower' %}काउली{% elif crop == 'Chilli' %}खुर्सानी{% elif crop == 'Kidneybean' %}राजमा{% elif crop == 'LargeCardamom' %}अलैँची{% elif crop == 'Maize' %}मकै{% elif crop == 'Mungbean' %}मुङ{% elif crop == 'Onion' %}प्याज{% elif crop == 'Rice' %}धान{% elif crop == 'Sesame' %}तिल{% elif crop == 'Strawberry' %}स्ट्रबेरी{% else %}{{ crop }}{% endif %}">
+                    {{ crop }}
+                  </span>
+                </p>
               </div>
             {% endfor %}
           </div>
           {{ form.crop(id="crop", class="hidden") }}
-          {% if form.crop.errors %}
-            <p class="text-sm text-red-600 mt-1">{{ form.crop.errors[0] }}</p>
-          {% endif %}
         </div>
 
-        <div id="upload-section" class="hidden">
-          <div class="mb-6 relative">
-            <label for="imageInput" class="block text-gray-700 font-medium mb-2">
-              <i class="fas fa-image text-green-600 mr-2"></i> Upload or Drag Image
+        <!-- Upload Section -->
+        <div id="upload-section" class="hidden space-y-8">
+          <div class="relative">
+            <label class="block text-xl font-semibold mb-4 text-center"
+                   data-en="Upload Leaf Image" data-np="पातको फोटो अपलोड गर्नुहोस्">
+              <i class="fas fa-camera text-green-600 mr-2"></i> Upload Leaf Image
             </label>
             <div id="upload-area" class="upload-area">
-              <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
-              <p class="text-gray-600" id="upload-text">Drag & drop or click to upload</p>
-              {{ form.file(id="imageInput", class="file-input", accept="image/jpeg,image/png,image/bmp") }}
+              <i class="fas fa-cloud-upload-alt text-6xl text-gray-400 mb-4"></i>
+              <p class="text-xl" id="upload-text" data-en="Click or drag & drop your image here" data-np="यहाँ क्लिक गर्नुहोस् वा फोटो तानेर छोड्नुहोस्">
+                Click or drag & drop your image here
+              </p>
+              <p class="text-sm text-gray-500 mt-2" data-en="Supports JPG, PNG, BMP • Max 10MB" data-np="JPG, PNG, BMP समर्थित • अधिकतम १० MB">
+                Supports JPG, PNG, BMP • Max 10MB
+              </p>
+              {{ form.file(id="imageInput", class="file-input", accept="image/*") }}
             </div>
-            <div id="image-preview" class="mt-4"></div>
-            {% if form.file.errors %}
-              <p class="text-sm text-red-600 mt-1">{{ form.file.errors[0] }}</p>
-            {% endif %}
+            <div id="image-preview" class="mt-8 text-center"></div>
           </div>
 
-          <div class="mb-6">
-            <button type="button" id="capture-btn" class="btn btn-secondary w-full flex items-center justify-center">
-              <i class="fas fa-camera mr-2"></i> Capture with Camera
+          <div class="flex gap-4 max-w-md mx-auto">
+            <button type="button" id="capture-btn" class="flex-1 btn bg-gray-600 hover:bg-gray-700 text-white">
+              <i class="fas fa-camera"></i> <span data-en="Open Camera" data-np="क्यामेरा खोल्नुहोस्">Open Camera</span>
+            </button>
+            <button type="submit" id="analyze-btn" class="flex-1 btn btn-primary text-lg font-bold" disabled>
+              <i class="fas fa-microscope"></i> <span data-en="Analyze Disease" data-np="रोग विश्लेषण गर्नुहोस्">Analyze Disease</span>
             </button>
           </div>
-
-          <button type="submit" id="analyze-btn" class="btn btn-primary w-full flex items-center justify-center" disabled>
-            <i class="fas fa-microscope mr-2"></i> Analyze Now
-          </button>
         </div>
       </form>
     </section>
 
-    <section class="card max-w-5xl mx-auto p-8 mt-12">
-      <h2 class="text-3xl font-semibold text-gray-800 mb-6 flex items-center">
-        <i class="fas fa-chart-line text-green-600 mr-3"></i> Diagnosis Result
+    <!-- Results Section -->
+    <section class="glass-card max-w-6xl mx-auto p-8 md:p-12 mt-16">
+      <h2 class="text-4xl font-bold mb-8 text-center flex items-center justify-center gap-3"
+          data-en="Diagnosis Result" data-np="निदान परिणाम">
+        <i class="fas fa-stethoscope text-green-600 text-5xl"></i>
+        Diagnosis Result
       </h2>
-      <div id="results-container">
+
+      <div id="results-container" class="text-center">
         {% if error %}
-          <div class="error-message">
-            <i class="fas fa-exclamation-circle"></i>
-            {{ error }} Try uploading a clearer image or selecting a different crop.
+          <div class="error-message max-w-2xl mx-auto text-lg">
+            <i class="fas fa-exclamation-triangle text-3xl"></i>
+            <div>{{ error }}</div>
           </div>
+          {% if image_file %}
+            <img src="{{ url_for('static', filename='Uploads/' + image_file) }}" class="uploaded-image" alt="Uploaded Image">
+          {% endif %}
+
         {% elif prediction %}
-          <div class="space-y-4">
-            <h3 class="text-xl font-semibold text-green-700">{{ prediction }}</h3>
+          <div class="space-y-12">
+            <div class="text-3xl font-bold text-green-700">{{ prediction }}</div>
+            
             {% if image_file %}
-              <img src="{{ url_for('static', filename='Uploads/' + image_file) }}" class="max-w-full sm:max-w-sm mx-auto rounded-lg shadow" alt="Uploaded Image">
+              <img src="{{ url_for('static', filename='Uploads/' + image_file) }}" class="uploaded-image" alt="Analyzed Image">
             {% endif %}
-            {% if prediction != "Image does not fall under the trained model." %}
-              <div class="confidence-bar">
-                <div class="confidence-fill" style="width: {{ confidence|default(0) }}%;"></div>
+
+            {% if "does not fall under" not in prediction %}
+              <!-- Main Confidence -->
+              <div class="max-w-md mx-auto">
+                <div class="text-lg font-semibold mb-3" data-en="Main Diagnosis Confidence" data-np="मुख्य निदान विश्वास">Main Diagnosis Confidence</div>
+                <div class="confidence-bar">
+                  <div class="confidence-fill" style="width: {{ confidence|default(0) }}%;"></div>
+                </div>
+                <p class="mt-3 text-2xl font-bold text-green-600">{{ "%.1f"|format(confidence|default(0)) }}%</p>
               </div>
-              <div>
-                <h4 class="font-medium text-gray-700 mt-4 mb-2">Recommendations</h4>
-                <div class="space-y-3">
+
+              <!-- AI Confidence Breakdown (Top 3) -->
+              {% if top3_probs %}
+                <div class="max-w-2xl mx-auto mt-12">
+                  <h3 class="text-2xl font-bold mb-6" data-en="AI Confidence Breakdown (Top 3)" data-np="एआई विश्वास विश्लेषण (शीर्ष ३)">AI Confidence Breakdown (Top 3)</h3>
+                  <div class="glass-card p-6">
+                    <canvas id="confidenceChart" height="300"></canvas>
+                  </div>
+                </div>
+              {% endif %}
+
+              <!-- Recommendations -->
+              <div class="mt-12">
+                <h3 class="text-2xl font-bold mb-6" data-en="Recommended Actions" data-np="सिफारिस गरिएका कार्यहरू">Recommended Actions</h3>
+                <div class="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
                   {% for rec in recommendations %}
-                    <div class="recommendation-card p-4 bg-gray-50 border rounded-lg">
-                      <h5 class="text-gray-800 font-semibold">{{ rec.action }}</h5>
-                      <p class="text-sm text-gray-600"><strong>Priority:</strong> {{ rec.priority }}</p>
-                      <p class="text-sm text-gray-600"><strong>Details:</strong> {{ rec.details }}</p>
-                      <p class="text-sm text-gray-600"><strong>Follow-up:</strong> {{ rec.follow_up }}</p>
+                    <div class="recommendation-card p-6 border-2 border-gray-200 rounded-xl text-left">
+                      <h4 class="text-xl font-bold mb-2">{{ rec.action }}</h4>
+                      <p class="text-sm"><strong class="text-red-600" data-en="Priority:" data-np="प्राथमिकता:">Priority:</strong> <span class="font-semibold">{{ rec.priority }}</span></p>
+                      <p class="text-sm mt-2 leading-relaxed">{{ rec.details }}</p>
+                      <p class="text-sm mt-3 italic text-gray-600" data-en="Follow-up: " data-np="फलो-अप: ">Follow-up: {{ rec.follow_up }}</p>
                     </div>
                   {% endfor %}
                 </div>
               </div>
             {% endif %}
           </div>
+
         {% else %}
-          <p class="text-gray-600">No diagnosis yet. Select a crop and upload or capture an image.</p>
+          <div class="text-gray-500 text-lg">
+            <i class="fas fa-leaf text-6xl text-gray-300 mb-6"></i>
+            <p data-en="Select a crop and upload a clear image of the affected leaf to get instant AI diagnosis."
+               data-np="तत्काल एआई निदान प्राप्त गर्न बाली छान्नुहोस् र प्रभावित पातको स्पष्ट फोटो अपलोड गर्नुहोस्।">
+              Select a crop and upload a clear image of the affected leaf to get instant AI diagnosis.
+            </p>
+          </div>
         {% endif %}
       </div>
     </section>
   </main>
 
-  <footer class="text-center py-8 text-sm text-gray-500 border-t mt-12">
-    <p>&copy; 2025 <strong>NepAgNeuroVision</strong>. All rights reserved. Designed by Bikas Basnet</p>
+  <footer class="text-center py-10 border-t mt-20">
+    <p class="text-lg">&copy; 2025 <strong class="text-green-700">NepAgNeuroVision</strong>. Empowering Agriculture with AI.</p>
+    <p class="text-sm mt-2">Developed by <strong>Bikas Basnet</strong></p>
   </footer>
 
   <script>
@@ -284,69 +385,119 @@
     const uploadText = document.getElementById('upload-text');
     const imagePreview = document.getElementById('image-preview');
     const analyzeBtn = document.getElementById('analyze-btn');
-    const captureBtn = document.getElementById('capture-btn');
+    const langToggle = document.getElementById('lang-toggle');
+    const themeToggle = document.getElementById('theme-toggle');
 
-    // Crop selection
+    let currentLang = 'en';
+
+    // Language Toggle
+    langToggle.addEventListener('click', () => {
+      currentLang = currentLang === 'en' ? 'np' : 'en';
+      langToggle.textContent = currentLang === 'en' ? 'नेपाली' : 'English';
+
+      document.querySelectorAll('[data-en][data-np]').forEach(el => {
+        el.textContent = el.dataset[currentLang];
+      });
+
+      document.querySelectorAll('.crop-card p span').forEach(span => {
+        const en = span.dataset.en;
+        const np = span.dataset.np;
+        span.textContent = currentLang === 'en' ? en : `${np} (${en})`;
+      });
+
+      document.querySelector('#capture-btn span').textContent = currentLang === 'en' ? 'Open Camera' : 'क्यामेरा खोल्नुहोस्';
+      document.querySelector('#analyze-btn span').textContent = currentLang === 'en' ? 'Analyze Disease' : 'रोग विश्लेषण गर्नुहोस्';
+    });
+
+    // Dark Mode Toggle
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.body.getAttribute('data-theme') === 'dark';
+      document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      themeToggle.innerHTML = isDark ? '<i class="fas fa-moon"></i> Dark' : '<i class="fas fa-sun"></i> Light';
+    });
+
+    function updateAnalyzeButton() {
+      if (cropInput.value && imageInput.files && imageInput.files.length > 0) {
+        analyzeBtn.disabled = false;
+      } else {
+        analyzeBtn.disabled = true;
+      }
+    }
+
     cropCards.forEach(card => {
       card.addEventListener('click', () => {
-        const crop = card.dataset.crop;
-        cropInput.value = crop;
         cropCards.forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
+        cropInput.value = card.dataset.crop;
         uploadSection.classList.remove('hidden');
-        analyzeBtn.disabled = !imageInput.files.length; // Enable button only if image is selected
+        uploadArea.scrollIntoView({ behavior: 'smooth' });
+        updateAnalyzeButton();
       });
     });
 
-    // File input handling
     imageInput.addEventListener('change', () => {
-      if (imageInput.files.length) {
+      if (imageInput.files && imageInput.files[0]) {
         const file = imageInput.files[0];
-        uploadText.textContent = `Selected: ${file.name}`;
+        uploadText.textContent = currentLang === 'en' ? `Selected: ${file.name}` : `छानिएको: ${file.name}`;
         const reader = new FileReader();
-        reader.onload = (e) => {
-          imagePreview.innerHTML = `<img src="${e.target.result}" class="max-w-full sm:max-w-xs mx-auto rounded-lg shadow" alt="Preview">`;
+        reader.onload = e => {
+          imagePreview.innerHTML = `<img src="${e.target.result}" class="uploaded-image" alt="Preview">`;
         };
         reader.readAsDataURL(file);
-        analyzeBtn.disabled = !cropInput.value; // Enable button if crop is selected
-      } else {
-        uploadText.textContent = 'Drag & drop or click to upload';
-        imagePreview.innerHTML = '';
-        analyzeBtn.disabled = true;
+        updateAnalyzeButton();
       }
     });
 
-    // Drag and drop
-    uploadArea.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      uploadArea.classList.add('dragover');
+    ['dragover', 'dragenter'].forEach(evt => {
+      uploadArea.addEventListener(evt, e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
     });
-    uploadArea.addEventListener('dragleave', () => {
-      uploadArea.classList.remove('dragover');
+    ['dragleave', 'drop'].forEach(evt => {
+      uploadArea.addEventListener(evt, e => { e.preventDefault(); uploadArea.classList.remove('dragover'); });
     });
-    uploadArea.addEventListener('drop', (e) => {
-      e.preventDefault();
-      uploadArea.classList.remove('dragover');
-      imageInput.files = e.dataTransfer.files;
-      imageInput.dispatchEvent(new Event('change'));
-    });
-
-    // Camera capture (basic placeholder)
-    captureBtn.addEventListener('click', () => {
-      alert('Camera capture not implemented. Please upload an image.');
-      // Add WebRTC camera capture logic here if needed
-    });
-
-    // Prevent form submission if no crop or file is selected
-    document.getElementById('predict-form').addEventListener('submit', (e) => {
-      if (!cropInput.value) {
-        e.preventDefault();
-        alert('Please select a crop before submitting.');
-      } else if (!imageInput.files.length) {
-        e.preventDefault();
-        alert('Please upload an image before submitting.');
+    uploadArea.addEventListener('drop', e => {
+      const files = e.dataTransfer.files;
+      if (files.length) {
+        imageInput.files = files;
+        imageInput.dispatchEvent(new Event('change'));
       }
     });
+
+    document.getElementById('capture-btn').addEventListener('click', () => {
+      alert(currentLang === 'en' ? "Camera feature coming soon! Please upload an image." : "क्यामेरा सुविधा चाँडै आउँदैछ! कृपया फोटो अपलोड गर्नुहोस्।");
+    });
+
+    document.getElementById('predict-form').addEventListener('submit', e => {
+      if (!cropInput.value || !imageInput.files || imageInput.files.length === 0) {
+        e.preventDefault();
+        alert(currentLang === 'en' ? "Please select a crop and upload a leaf image!" : "कृपया बाली छान्नुहोस् र पातको फोटो अपलोड गर्नुहोस्!");
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', updateAnalyzeButton);
+
+    // Render Top 3 Confidence Pie Chart (only if data exists)
+    {% if top3_probs %}
+      const ctx = document.getElementById('confidenceChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: {{ top3_labels|tojson }},
+          datasets: [{
+            data: {{ top3_probs|tojson }},
+            backgroundColor: ['#16a34a', '#22c55e', '#86efac'],
+            borderColor: '#fff',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: 'rgb(156 163 175)' } },
+            tooltip: { callbacks: { label: context => `${context.label}: ${context.raw.toFixed(2)}%` } }
+          }
+        }
+      });
+    {% endif %}
   </script>
 </body>
 </html>
