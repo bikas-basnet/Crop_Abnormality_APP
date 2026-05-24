@@ -1,7 +1,10 @@
 flask
 flask-wtf
-torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 pillow
 filetype
 numpy
 gunicorn
+torch
+torchvision
+torchaudio
+--index-url https://download.pytorch.org/whl/cpu
